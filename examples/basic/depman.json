@@ -1,0 +1,8 @@
+{
+	"dependencies": [
+		{
+			"location": "https://github.com/github/linguist.git",
+			"version": "v6.3.1"
+		}
+	]
+}
