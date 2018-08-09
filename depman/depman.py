@@ -12,6 +12,7 @@ import os
 import sys
 import json
 import argparse
+import subprocess
 from urllib.parse import urlparse
 import logging
 
@@ -31,6 +32,7 @@ class Config:
     dependencies = None
     command = None
     args = None
+    dependencies_dir = None
 
 
 def handle_args(argv):
@@ -46,7 +48,9 @@ def handle_args(argv):
     )
 
     subparsers = parser.add_subparsers(help='Commands', dest='command')
-    subparsers.add_parser('list', help='Lists all dependencies from depman.json')
+    subparsers.add_parser('init', help='Initializes the dependency dir')
+    subparsers.add_parser('list', help='Lists all dependencies')
+    subparsers.add_parser('update', help='Fetches all dependencies at their specified version')
 
     args = parser.parse_args(argv)
 
@@ -99,6 +103,12 @@ def parse_deplist(deplist):
     return deps
 
 
+def parse_config(config, depman_config):
+    config.dependencies_dir = os.path.join(os.path.dirname(config.depfile), 'deps')
+    if depman_config:
+        config.dependencies_dir = depman_config.get('dependencies_dir', config.dependencies_dir)
+
+
 def parse_depfile(config):
     if not os.path.exists(config.depfile):
         DEPMAN_LOGGER.error('Could not file depfile {0}'.format(config.depfile))
@@ -108,10 +118,25 @@ def parse_depfile(config):
         depfile = json.load(f)
         f.close()
 
+        depman_config = depfile.get('config', {})
+        parse_config(config, depman_config)
+
         deplist = depfile.get('dependencies', [])
         if not deplist:
             DEPMAN_LOGGER.warning('Depfile has no dependencies.')
         config.dependencies = parse_deplist(deplist)
+
+
+def init(config):
+    if os.path.exists(config.dependencies_dir):
+        if not os.path.isdir(config.dependencies_dir):
+            DEPMAN_LOGGER.error("Path %s exists, but isn't a directory!", config.dependencies_dir)
+            raise Exception
+    else:
+        os.makedirs(config.dependencies_dir)
+
+    with open(os.path.join(config.dependencies_dir, '.depman'), 'wb') as f:
+        f.write("\0".encode())
 
 
 def list_deps(config):
@@ -123,8 +148,53 @@ def list_deps(config):
             DEPMAN_LOGGER.info(" - {dep.name} ({dep.version}): {dep.location}".format(dep=dep))
 
 
+def update_dep(config, dep):
+    dep_dir = os.path.join(config.dependencies_dir, dep.name)
+    if os.path.exists(dep_dir):
+        if os.path.isdir(dep_dir):
+            cmd = ['git', 'fetch', 'origin', '-q']
+            result = subprocess.run(cmd, cwd=dep_dir)
+            if result.returncode != 0:
+                DEPMAN_LOGGER.error(
+                    "Error (exit code %d) when fetching dependency %s with command-line:\n%s",
+                    result.returncode, dep.name, cmd
+                )
+            cmd = ['git', 'checkout', dep.version, '-q']
+            result = subprocess.run(cmd, cwd=dep_dir)
+            if result.returncode != 0:
+                DEPMAN_LOGGER.error(
+                    "Error (exit code %d) when switching to version/branch %s dependency %s with command-line:\n%s",
+                    result.returncode, dep.version, dep.name, cmd
+                )
+        else:
+            DEPMAN_LOGGER.error("Path %s exists, but isn't a directory!", dep_dir)
+    else:
+        DEPMAN_LOGGER.info("Checking out %s version %s from %s", dep.name, dep.version, dep.location)
+        cmd = ['git', 'clone', dep.location, dep.name, '--recursive', '-q']
+        if dep.version != 'HEAD':
+            cmd += ['-b', dep.version]
+        result = subprocess.run(cmd, cwd=config.dependencies_dir)
+        if result.returncode != 0:
+            DEPMAN_LOGGER.error(
+                "Error (exit code %d) when checking out dependency %s with command-line:\n%s",
+                result.returncode, dep.name, cmd
+            )
+
+
+def update_deps(config):
+    init(config)
+    # DEPMAN_LOGGER.info("")
+    if not config.dependencies:
+        DEPMAN_LOGGER.info("No dependencies found.")
+    else:
+        for dep in config.dependencies:
+            update_dep(config, dep)
+
+
 DEPMAN_COMMANDS = {
+    'init': init,
     'list': list_deps,
+    'update': update_deps,
 }
 
 
