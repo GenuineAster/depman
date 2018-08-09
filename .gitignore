@@ -105,3 +105,7 @@ venv.bak/
 
 # editor stuff
 .vscode/
+
+
+# depman example deps
+examples/*/deps/
