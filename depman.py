@@ -157,16 +157,21 @@ def update_dep(config, dep):
     dep_dir = os.path.join(config.dependencies_dir, dep.name)
     if os.path.exists(dep_dir):
         if os.path.isdir(dep_dir):
-            cmd = ['git', 'fetch', 'origin', '-q']
-            result = subprocess.run(cmd, cwd=dep_dir)
+            DEPMAN_LOGGER.info("Updating %s version %s from %s", dep.name, dep.version, dep.location)
+            cmd = ['git', 'fetch', 'origin']
+            result = subprocess.run(cmd, cwd=dep_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             if result.returncode != 0:
+                DEPMAN_LOGGER.info(result.stdout)
+                DEPMAN_LOGGER.info(result.stderr)
                 DEPMAN_LOGGER.error(
                     "Error (exit code %d) when fetching dependency %s with command-line:\n%s",
                     result.returncode, dep.name, cmd
                 )
-            cmd = ['git', 'checkout', dep.version, '-q']
-            result = subprocess.run(cmd, cwd=dep_dir)
+            cmd = ['git', 'checkout', dep.version]
+            result = subprocess.run(cmd, cwd=dep_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             if result.returncode != 0:
+                DEPMAN_LOGGER.info(result.stdout)
+                DEPMAN_LOGGER.info(result.stderr)
                 DEPMAN_LOGGER.error(
                     "Error (exit code %d) when switching to version/branch %s dependency %s with command-line:\n%s",
                     result.returncode, dep.version, dep.name, cmd
@@ -175,11 +180,13 @@ def update_dep(config, dep):
             DEPMAN_LOGGER.error("Path %s exists, but isn't a directory!", dep_dir)
     else:
         DEPMAN_LOGGER.info("Checking out %s version %s from %s", dep.name, dep.version, dep.location)
-        cmd = ['git', 'clone', dep.location, dep.name, '--recursive', '-q']
+        cmd = ['git', 'clone', dep.location, dep.name, '--recursive']
         if dep.version != 'HEAD':
             cmd += ['-b', dep.version]
-        result = subprocess.run(cmd, cwd=config.dependencies_dir)
+        result = subprocess.run(cmd, cwd=config.dependencies_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if result.returncode != 0:
+            DEPMAN_LOGGER.info(result.stdout)
+            DEPMAN_LOGGER.info(result.stderr)
             DEPMAN_LOGGER.error(
                 "Error (exit code %d) when checking out dependency %s with command-line:\n%s",
                 result.returncode, dep.name, cmd
@@ -188,7 +195,7 @@ def update_dep(config, dep):
 
 def update_deps(config):
     init(config)
-    # DEPMAN_LOGGER.info("")
+    DEPMAN_LOGGER.info("Updating dependencies")
     if not config.dependencies:
         DEPMAN_LOGGER.info("No dependencies found.")
     else:
