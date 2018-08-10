@@ -102,4 +102,19 @@ So far, these are the values that can be used in the depman.json `config` sectio
 
 Submodules in Git are notoriously bad for dependency management. They are locked to specific commits, which means if you want to develop a dependency along with a main project, you end up with having to update submodules all the time.
 
-With depman, you can track a specific branch or tag and keep up to date with that, allowing you to lock to a specific version if needed, or stay at the tip of a branch.
+With *depman*, you can track a specific branch or tag and keep up to date with that, allowing you to lock to a specific version if needed, or stay at the tip of a branch.
+
+
+## What's left to do?
+
+*depman* aims to be small and lightweight, the goal being to keep `depman.py` under 2500 lines of Python, with no external Python dependencies.
+
+These are features I'd like to add to *depman* at some point:
+- Better build support
+	- Built-in support for building dependencies with CMake
+	- Better support for build commands, like persistent cwd
+	- Per-platform build command sets
+- Easier organization and discovery with unified, per-platform, per-config local install directory for built dependencies
+- CMake module for interfacing with depman from CMake, also thus forwarding generator and other parameters
+	- Way to obtain install dir and source dir for each dependency
+- More flexible command line allowing multiple commands per line
