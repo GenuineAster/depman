@@ -79,6 +79,25 @@ So far, these are the values that can be used in the depman.json `config` sectio
 | ------------------ | -------------------------------------------------------------- |
 | *dependencies_dir* | The location to store dependencies in, relative to depman.json |
 
+### Building with depman
+
+*depman* currenty supports building via a crude list of command-line options that can be passed per-dependency in the `build` option, like so:
+```json
+{
+	"dependencies": [
+		{
+			"location": "https://github.com/glfw/glfw",
+			"version": "3.2.1",
+			"build": [
+				"cmake . -DCMAKE_INSTALL_PREFIX=./install/ -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF",
+				"cmake --build . --config Release",
+				"cmake --build . --config Release --target INSTALL"
+			]
+		}
+	]
+}
+```
+
 ## Why not just use submodules?
 
 Submodules in Git are notoriously bad for dependency management. They are locked to specific commits, which means if you want to develop a dependency along with a main project, you end up with having to update submodules all the time.

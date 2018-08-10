@@ -53,6 +53,7 @@ def handle_args(argv):
     subparsers.add_parser('init', help='Initializes the dependency dir')
     subparsers.add_parser('list', help='Lists all dependencies')
     subparsers.add_parser('update', help='Fetches all dependencies at their specified version')
+    subparsers.add_parser('build', help='Builds dependencies')
 
     args = parser.parse_args(argv)
 
@@ -68,6 +69,7 @@ class Dependency:
     name = None
     location = None
     version = None
+    build_commands = None
 
 
 def get_name_from_url(url):
@@ -86,6 +88,7 @@ def parse_dependency(dependency):
     dep.name = dependency.get('name', None)
     dep.location = dependency.get('location', None)
     dep.version = dependency.get('version', None)
+    dep.build_commands = dependency.get('build', [])
 
     if dep.location is None:
         DEPMAN_LOGGER.error('Dependency {0} has no location!'.format(dep.name))
@@ -193,10 +196,31 @@ def update_deps(config):
             update_dep(config, dep)
 
 
+def build_dep(config, dep):
+    dep_dir = os.path.join(config.dependencies_dir, dep.name)
+    if dep.build_commands:
+        for cmd in dep.build_commands:
+            result = subprocess.run(cmd, cwd=dep_dir)
+            if result.returncode != 0:
+                DEPMAN_LOGGER.error("Failed to build dependency %s", dep.name)
+    else:
+        DEPMAN_LOGGER.info("Skipping build for dependency %s", dep.name)
+
+
+def build_deps(config):
+    init(config)
+    DEPMAN_LOGGER.info("Building dependencies")
+    if not config.dependencies:
+        DEPMAN_LOGGER.info("No dependencies found.")
+    else:
+        for dep in config.dependencies:
+            build_dep(config, dep)
+
 DEPMAN_COMMANDS = {
     'init': init,
     'list': list_deps,
     'update': update_deps,
+    'build': build_deps,
 }
 
 
