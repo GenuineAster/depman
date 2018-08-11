@@ -81,7 +81,7 @@ So far, these are the values that can be used in the depman.json `config` sectio
 
 ### Building with depman
 
-*depman* currenty supports building via a crude list of command-line options that can be passed per-dependency in the `build` option, like so:
+*depman* currenty supports building via a crude list of shell commands that can be passed per-dependency in the `build` option, like so:
 ```json
 {
 	"dependencies": [
