@@ -206,10 +206,12 @@ def update_deps(config):
 def build_dep(config, dep):
     dep_dir = os.path.join(config.dependencies_dir, dep.name)
     if dep.build_commands:
+        DEPMAN_LOGGER.info("Building dependency %s", dep.name)
         for cmd in dep.build_commands:
-            result = subprocess.run(cmd, cwd=dep_dir)
+            result = subprocess.run(cmd, cwd=dep_dir, shell=True)
             if result.returncode != 0:
                 DEPMAN_LOGGER.error("Failed to build dependency %s", dep.name)
+                return
     else:
         DEPMAN_LOGGER.info("Skipping build for dependency %s", dep.name)
 
