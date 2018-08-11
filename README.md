@@ -1,7 +1,7 @@
 # depman
 Dependency management for those who are tired of dependency management.
 
-This tool was written to solve the problem of having to manage lots of dependencies in projects utilize languages with no good dependency management system (i.e C and C++).
+This tool was written to solve the problem of having to manage lots of dependencies in projects that utilize languages with no good dependency management system (i.e C and C++).
 
 While there exist a lot of package management systems for C and C++, there are no good ones that are lightweight and work for any dependency. *depman* aims to provide a simple script that can be added as a git submodule or simply in-place to any repository, and provides limitless dependency management. As it is written in Python, *depman* will run on any platform supported by Python.
 
