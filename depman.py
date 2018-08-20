@@ -71,6 +71,8 @@ class Dependency:
     version = None
     build_commands = None
     recurse = None
+    build_dir = None
+    source_dir = None
 
 
 def get_name_from_url(url):
@@ -84,12 +86,13 @@ def get_name_from_url(url):
     return name
 
 
-def parse_dependency(dependency):
+def parse_dependency(config, dependency):
     dep = Dependency()
     dep.name = dependency.get('name', None)
     dep.location = dependency.get('location', None)
     dep.recurse = dependency.get('recurse', True)
     dep.version = dependency.get('version', None)
+    dep.build_dir = dependency.get('build_dir', ".")
     dep.build_commands = dependency.get('build', [])
 
     if dep.location is None:
@@ -102,11 +105,16 @@ def parse_dependency(dependency):
     if dep.version is None:
         dep.version = 'HEAD'
 
+    dep.source_dir = os.path.join(config.dependencies_dir, dep.name)
+
+    if not os.path.isabs(dep.build_dir):
+        dep.build_dir = os.path.join(dep.source_dir, dep.build_dir)
+
     return dep
 
 
-def parse_deplist(deplist):
-    deps = [parse_dependency(x) for x in deplist]
+def parse_deplist(config, deplist):
+    deps = [parse_dependency(config, x) for x in deplist]
     return deps
 
 
@@ -131,7 +139,7 @@ def parse_depfile(config):
         deplist = depfile.get('dependencies', [])
         if not deplist:
             DEPMAN_LOGGER.warning('Depfile has no dependencies.')
-        config.dependencies = parse_deplist(deplist)
+        config.dependencies = parse_deplist(config, deplist)
 
 
 def init(config):
@@ -156,12 +164,11 @@ def list_deps(config):
 
 
 def update_dep(config, dep):
-    dep_dir = os.path.join(config.dependencies_dir, dep.name)
-    if os.path.exists(dep_dir):
-        if os.path.isdir(dep_dir):
+    if os.path.exists(dep.source_dir):
+        if os.path.isdir(dep.source_dir):
             DEPMAN_LOGGER.info("Updating %s version %s from %s", dep.name, dep.version, dep.location)
             cmd = ['git', 'fetch', 'origin']
-            result = subprocess.run(cmd, cwd=dep_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            result = subprocess.run(cmd, cwd=dep.source_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             if result.returncode != 0:
                 DEPMAN_LOGGER.info(result.stdout)
                 DEPMAN_LOGGER.info(result.stderr)
@@ -171,7 +178,7 @@ def update_dep(config, dep):
                 )
                 return
             cmd = ['git', 'checkout', dep.version]
-            result = subprocess.run(cmd, cwd=dep_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            result = subprocess.run(cmd, cwd=dep.source_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             if result.returncode != 0:
                 DEPMAN_LOGGER.info(result.stdout)
                 DEPMAN_LOGGER.info(result.stderr)
@@ -181,7 +188,7 @@ def update_dep(config, dep):
                 )
                 return
         else:
-            DEPMAN_LOGGER.error("Path %s exists, but isn't a directory!", dep_dir)
+            DEPMAN_LOGGER.error("Path %s exists, but isn't a directory!", dep.source_dir)
     else:
         DEPMAN_LOGGER.info("Checking out %s version %s from %s", dep.name, dep.version, dep.location)
         cmd = ['git', 'clone', dep.location, dep.name]
@@ -211,11 +218,13 @@ def update_deps(config):
 
 
 def build_dep(config, dep):
-    dep_dir = os.path.join(config.dependencies_dir, dep.name)
     if dep.build_commands:
+        if not os.path.exists(dep.build_dir):
+            DEPMAN_LOGGER.warning("Creating directory %s", dep.build_dir)
+            os.makedirs(dep.build_dir)
         DEPMAN_LOGGER.info("Building dependency %s", dep.name)
         for cmd in dep.build_commands:
-            result = subprocess.run(cmd, cwd=dep_dir, shell=True)
+            result = subprocess.run(cmd, cwd=dep.build_dir, shell=True)
             if result.returncode != 0:
                 DEPMAN_LOGGER.error("Failed to build dependency %s", dep.name)
                 return False
