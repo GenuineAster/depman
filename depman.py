@@ -118,7 +118,7 @@ def parse_config(config, depman_config):
 
 def parse_depfile(config):
     if not os.path.exists(config.depfile):
-        DEPMAN_LOGGER.error('Could not file depfile {0}'.format(config.depfile))
+        DEPMAN_LOGGER.error('Could not find depfile {0}'.format(config.depfile))
         return Config()
 
     with open(config.depfile, 'r') as f:
