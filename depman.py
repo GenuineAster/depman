@@ -169,6 +169,7 @@ def update_dep(config, dep):
                     "Error (exit code %d) when fetching dependency %s with command-line:\n%s",
                     result.returncode, dep.name, cmd
                 )
+                return
             cmd = ['git', 'checkout', dep.version]
             result = subprocess.run(cmd, cwd=dep_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             if result.returncode != 0:
@@ -196,6 +197,7 @@ def update_dep(config, dep):
                 "Error (exit code %d) when checking out dependency %s with command-line:\n%s",
                 result.returncode, dep.name, cmd
             )
+            return
 
 
 def update_deps(config):
@@ -216,9 +218,10 @@ def build_dep(config, dep):
             result = subprocess.run(cmd, cwd=dep_dir, shell=True)
             if result.returncode != 0:
                 DEPMAN_LOGGER.error("Failed to build dependency %s", dep.name)
-                return
+                return False
     else:
         DEPMAN_LOGGER.info("Skipping build for dependency %s", dep.name)
+    return True
 
 
 def build_deps(config):
@@ -228,7 +231,9 @@ def build_deps(config):
         DEPMAN_LOGGER.info("No dependencies found.")
     else:
         for dep in config.dependencies:
-            build_dep(config, dep)
+            status = build_dep(config, dep)
+            if not status:
+                break
 
 DEPMAN_COMMANDS = {
     'init': init,
