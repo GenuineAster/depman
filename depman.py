@@ -70,6 +70,7 @@ class Dependency:
     location = None
     version = None
     build_commands = None
+    recurse = None
 
 
 def get_name_from_url(url):
@@ -87,6 +88,7 @@ def parse_dependency(dependency):
     dep = Dependency()
     dep.name = dependency.get('name', None)
     dep.location = dependency.get('location', None)
+    dep.recurse = dependency.get('recurse', True)
     dep.version = dependency.get('version', None)
     dep.build_commands = dependency.get('build', [])
 
@@ -176,11 +178,14 @@ def update_dep(config, dep):
                     "Error (exit code %d) when switching to version/branch %s dependency %s with command-line:\n%s",
                     result.returncode, dep.version, dep.name, cmd
                 )
+                return
         else:
             DEPMAN_LOGGER.error("Path %s exists, but isn't a directory!", dep_dir)
     else:
         DEPMAN_LOGGER.info("Checking out %s version %s from %s", dep.name, dep.version, dep.location)
-        cmd = ['git', 'clone', dep.location, dep.name, '--recursive']
+        cmd = ['git', 'clone', dep.location, dep.name]
+        if dep.recurse:
+            cmd += ['--recursive']
         if dep.version != 'HEAD':
             cmd += ['-b', dep.version]
         result = subprocess.run(cmd, cwd=config.dependencies_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
